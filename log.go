@@ -9,13 +9,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Context keys
-type requestIDCtxKey struct{}
-
-type logCtxKey struct{}
-
-var defaultLogCtx zerolog.Context
-
 func init() {
 	// Skip additional frames to show the actual caller in logs
 	zerolog.CallerSkipFrameCount = 3
@@ -40,14 +33,8 @@ func init() {
 		return file[secondLastSlash+1:] + ":" + strconv.Itoa(line)
 	}
 
-	defaultLogger := zerolog.New(os.Stdout).
-		With().
-		Timestamp().
-		Caller().
-		Logger().
-		Level(zerolog.InfoLevel)
+	Setup(InfoLevel)
 
-	defaultLogCtx = defaultLogger.With()
 }
 
 type Level = zerolog.Level
@@ -80,95 +67,50 @@ func ParseLevel(levelStr string) (Level, error) {
 }
 
 // Setup allows customization of the kvLog output and leve
-// Setup allows customization of the kvLog output and level
 func Setup(level Level) {
-	defaultLogCtx = zerolog.New(os.Stdout).
+	defaultLogger := zerolog.New(os.Stderr).
 		With().
 		Timestamp().
 		Caller().
 		Logger().
-		Level(level).
-		With()
+		Level(level)
+	zerolog.DefaultContextLogger = &defaultLogger
 }
 
 // Info logs an info level message with variadic arguments
 func Info(ctx context.Context, args ...interface{}) {
-	logger := getLogCtxWithRequestID(ctx).Logger()
-	logger.Info().Msg(formatMessage(args...))
-}
-
-func getLogCtxWithRequestID(ctx context.Context) zerolog.Context {
-	logCtx := getLogContextFromContext(ctx)
-
-	// Add request ID if present
-	if requestID, ok := ctx.Value(requestIDCtxKey{}).(string); ok && requestID != "" {
-		logCtx = logCtx.Str("request_id", requestID)
-	}
-	return logCtx
+	zerolog.Ctx(ctx).Info().Msg(formatMessage(args...))
 }
 
 // Debug logs a debug level message with variadic arguments
 func Debug(ctx context.Context, args ...interface{}) {
-	logger := getLogCtxWithRequestID(ctx).Logger()
-	logger.Debug().Msg(formatMessage(args...))
+	zerolog.Ctx(ctx).Debug().Msg(formatMessage(args...))
 }
 
 // Warn logs a warn level message with variadic arguments
 func Warn(ctx context.Context, args ...interface{}) {
-	logger := getLogCtxWithRequestID(ctx).Logger()
-	logger.Warn().Msg(formatMessage(args...))
+	zerolog.Ctx(ctx).Warn().Msg(formatMessage(args...))
 }
 
 // Error logs an error level message with variadic arguments
 func Error(ctx context.Context, args ...interface{}) {
-	logger := getLogCtxWithRequestID(ctx).Logger()
-	logger.Error().Msg(formatMessage(args...))
+	zerolog.Ctx(ctx).Error().Msg(formatMessage(args...))
 }
 
-// SaveRequestID stores a request ID in the context
-func SaveRequestID(ctx context.Context, requestID string) context.Context {
-	return context.WithValue(ctx, requestIDCtxKey{}, requestID)
-}
-
-// GetRequestID retrieves the request ID from the context
-func GetRequestID(ctx context.Context) string {
-	if ctx == nil {
-		return ""
-	}
-
-	if requestID, ok := ctx.Value(requestIDCtxKey{}).(string); ok {
-		return requestID
-	}
-
-	return ""
+// WithRequestID stores a request ID in a new zerolog context
+func WithRequestID(ctx context.Context, requestID string) context.Context {
+	return zerolog.Ctx(ctx).With(). // Create a child logger to hold request_id
+					Str("request_id", requestID).
+					Logger().
+					WithContext(ctx) // New context with the child logger that has the request ID
 }
 
 // WithContextValues adds key-value pairs to the context for logging
 func WithContextValues(ctx context.Context, keysAndValues ...interface{}) context.Context {
-	// Get existing zerolog context from context or use default
-	logCtx := getLogContextFromContext(ctx)
-
-	// Add new key-value pairs
-	logCtx = logCtx.Fields(keysAndValues)
-
-	// Store the context directly
-	return context.WithValue(ctx, logCtxKey{}, logCtx)
-}
-
-// Helper functions
-
-// getLogContextFromContext retrieves a zerolog.Context from context or creates a new one
-func getLogContextFromContext(ctx context.Context) zerolog.Context {
-	if ctx == nil {
-		return defaultLogCtx
-	}
-
-	// Check if we already have a zerolog.Context stored
-	if logCtx, ok := ctx.Value(logCtxKey{}).(zerolog.Context); ok {
-		return logCtx
-	}
-
-	return defaultLogCtx
+	return zerolog.Ctx(ctx).With(). // Create a child logger to hold key-value pairs
+					Fields(keysAndValues).
+					Logger().
+					WithContext(ctx) // New context with the child logger
 }
 
 // Helper function to format variadic arguments into a single message

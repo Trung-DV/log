@@ -28,7 +28,7 @@ func TestLog(t *testing.T) {
 
 	log.Info(ctx, "Mixed", "string", 123, errors.New("error"))
 
-	ctx = log.SaveRequestID(ctx, "main-12345")
+	ctx = log.WithRequestID(ctx, "main-12345")
 	log.Info(ctx, "Processing with request ID")
 	ctx = log.WithContextValues(ctx, "user", "main")
 	log.Error(ctx, "Error processing request")
