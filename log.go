@@ -5,11 +5,15 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/rs/zerolog"
 )
 
 func init() {
+	// Set nanosecond precision for timestamps
+	zerolog.TimeFieldFormat = time.RFC3339Nano
+
 	// Skip additional frames to show the actual caller in logs
 	zerolog.CallerSkipFrameCount = 3
 
@@ -34,7 +38,6 @@ func init() {
 	}
 
 	Setup(InfoLevel)
-
 }
 
 type Level = zerolog.Level
@@ -78,22 +81,22 @@ func Setup(level Level) {
 }
 
 // Info logs an info level message with variadic arguments
-func Info(ctx context.Context, args ...interface{}) {
+func Info(ctx context.Context, args ...any) {
 	zerolog.Ctx(ctx).Info().Msg(formatMessage(args...))
 }
 
 // Debug logs a debug level message with variadic arguments
-func Debug(ctx context.Context, args ...interface{}) {
+func Debug(ctx context.Context, args ...any) {
 	zerolog.Ctx(ctx).Debug().Msg(formatMessage(args...))
 }
 
 // Warn logs a warn level message with variadic arguments
-func Warn(ctx context.Context, args ...interface{}) {
+func Warn(ctx context.Context, args ...any) {
 	zerolog.Ctx(ctx).Warn().Msg(formatMessage(args...))
 }
 
 // Error logs an error level message with variadic arguments
-func Error(ctx context.Context, args ...interface{}) {
+func Error(ctx context.Context, args ...any) {
 	zerolog.Ctx(ctx).Error().Msg(formatMessage(args...))
 }
 
@@ -106,7 +109,7 @@ func WithRequestID(ctx context.Context, requestID string) context.Context {
 }
 
 // WithContextValues adds key-value pairs to the context for logging
-func WithContextValues(ctx context.Context, keysAndValues ...interface{}) context.Context {
+func WithContextValues(ctx context.Context, keysAndValues ...any) context.Context {
 	return zerolog.Ctx(ctx).With(). // Create a child logger to hold key-value pairs
 					Fields(keysAndValues).
 					Logger().
@@ -114,7 +117,7 @@ func WithContextValues(ctx context.Context, keysAndValues ...interface{}) contex
 }
 
 // Helper function to format variadic arguments into a single message
-func formatMessage(args ...interface{}) string {
+func formatMessage(args ...any) string {
 	if len(args) == 0 {
 		return ""
 	}
