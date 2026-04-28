@@ -106,7 +106,7 @@ log.Setup(log.DebugLevel)
 
 ## Sample Output
 
-```json
+```json lines
 {"level":"info","time":"2025-03-21T23:44:16+07:00","caller":"log/usage_test.go:13","message":"This is info log"}
 {"level":"warn","time":"2025-03-21T23:44:16+07:00","caller":"log/usage_test.go:15","message":"Warning log"}
 {"level":"error","time":"2025-03-21T23:44:16+07:00","caller":"log/usage_test.go:16","message":"Error happen"}
